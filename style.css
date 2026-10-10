@@ -55,8 +55,4 @@ html{-webkit-text-size-adjust:100%}
 #stage{overflow:hidden}
 #prev{display:block;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
 
-html{overscroll-behavior-y:none;height:100%}
-body{min-height:100vh;min-height:100dvh}
-header{position:-webkit-sticky;position:sticky;top:0;z-index:10;background:linear-gradient(135deg,#0fb5ae,#1d7bff);-webkit-backdrop-filter:none;backdrop-filter:none}
-html,body{overflow:hidden}
-body{position:fixed;top:0;bottom:0;left:0;right:0;min-height:0;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;overscroll-behavior:none}
+html{overscroll-behavior-y:none}
