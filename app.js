@@ -41,14 +41,19 @@ async function refreshEditor(){
   $('cropReset').classList.toggle('hide', files.length !== 1);
   $('edhint').classList.toggle('hide', files.length !== 1);
   if (!show) { prevImg = null; return; }
-  try { prevImg = await loadImg(files[0]); } catch(e){ prevImg = null; return; }
+  try {
+    const full = await loadImg(files[0]), s = Math.min(1, 900 / Math.max(full.naturalWidth, full.naturalHeight));
+    const c = document.createElement('canvas'); c.width = Math.max(1,Math.round(full.naturalWidth*s)); c.height = Math.max(1,Math.round(full.naturalHeight*s));
+    c.getContext('2d').drawImage(full, 0, 0, c.width, c.height); prevImg = c;
+  } catch(e){ prevImg = null; return; }
   drawPrev();
 }
 function rotated(img, rot){
+  const iw = img.naturalWidth || img.width, ih = img.naturalHeight || img.height;
   const c = document.createElement('canvas'), q = rot % 2;
-  c.width = q ? img.naturalHeight : img.naturalWidth; c.height = q ? img.naturalWidth : img.naturalHeight;
+  c.width = q ? ih : iw; c.height = q ? iw : ih;
   const x = c.getContext('2d'); x.translate(c.width/2, c.height/2); x.rotate(rot*Math.PI/2);
-  x.drawImage(img, -img.naturalWidth/2, -img.naturalHeight/2); return c;
+  x.drawImage(img, -iw/2, -ih/2); return c;
 }
 // source canvas for an image with rotation and (single image) crop applied
 function sourceFor(img){
@@ -66,24 +71,28 @@ function drawPrev(){
   if (!prevImg) return;
   const r = rotated(prevImg, edit.rot), maxW = Math.min(420, document.body.clientWidth - 40), s = Math.min(1, maxW / r.width, 260 / r.height);
   const cv = $('prev'); cv.width = Math.round(r.width*s); cv.height = Math.round(r.height*s);
-  const x = cv.getContext('2d'); x.drawImage(r, 0, 0, cv.width, cv.height);
-  if (files.length === 1 && edit.crop){
-    const k = edit.crop, rx = k.x*cv.width, ry = k.y*cv.height, rw = k.w*cv.width, rh = k.h*cv.height;
-    x.fillStyle = 'rgba(0,0,0,.55)'; x.fillRect(0,0,cv.width,ry); x.fillRect(0,ry+rh,cv.width,cv.height-ry-rh);
-    x.fillRect(0,ry,rx,rh); x.fillRect(rx+rw,ry,cv.width-rx-rw,rh);
-    x.strokeStyle = '#0fb5ae'; x.lineWidth = 2; x.strokeRect(rx,ry,rw,rh);
-  }
+  cv.getContext('2d').drawImage(r, 0, 0, cv.width, cv.height);
+  updateBox();
+}
+function updateBox(){
+  const bx = $('cropbox'), k = edit.crop;
+  if (!(files.length === 1 && k)) { bx.style.display = 'none'; return; }
+  bx.style.display = 'block';
+  bx.style.left = (k.x*100) + '%'; bx.style.top = (k.y*100) + '%'; bx.style.width = (k.w*100) + '%'; bx.style.height = (k.h*100) + '%';
 }
 $('rotL').onclick = () => { edit.rot = (edit.rot + 3) % 4; edit.crop = null; drawPrev(); };
 $('rotR').onclick = () => { edit.rot = (edit.rot + 1) % 4; edit.crop = null; drawPrev(); };
-$('cropReset').onclick = () => { edit.crop = null; drawPrev(); };
+$('cropReset').onclick = () => { edit.crop = null; updateBox(); };
 (function(){
-  const cv = $('prev'); let st = null;
-  const pt = e => { const b = cv.getBoundingClientRect(); return {x: Math.min(1,Math.max(0,(e.clientX-b.left)/b.width)), y: Math.min(1,Math.max(0,(e.clientY-b.top)/b.height))}; };
-  cv.addEventListener('pointerdown', e => { if (files.length !== 1) return; cv.setPointerCapture(e.pointerId); st = pt(e); });
-  cv.addEventListener('pointermove', e => { if (!st) return; const p = pt(e);
-    edit.crop = {x:Math.min(st.x,p.x), y:Math.min(st.y,p.y), w:Math.abs(p.x-st.x), h:Math.abs(p.y-st.y)}; drawPrev(); });
-  cv.addEventListener('pointerup', () => { if (edit.crop && (edit.crop.w < 0.02 || edit.crop.h < 0.02)) { edit.crop = null; drawPrev(); } st = null; });
+  const cv = $('prev'); let st = null, rect = null, last = null, raf = 0;
+  const pt = e => ({x: Math.min(1,Math.max(0,(e.clientX-rect.left)/rect.width)), y: Math.min(1,Math.max(0,(e.clientY-rect.top)/rect.height))});
+  const apply = () => { raf = 0; if (!last) return; const p = last;
+    edit.crop = {x:Math.min(st.x,p.x), y:Math.min(st.y,p.y), w:Math.abs(p.x-st.x), h:Math.abs(p.y-st.y)}; updateBox(); };
+  cv.addEventListener('pointerdown', e => { if (files.length !== 1) return; e.preventDefault(); rect = cv.getBoundingClientRect(); cv.setPointerCapture(e.pointerId); st = pt(e); last = null; });
+  cv.addEventListener('pointermove', e => { if (!st) return; e.preventDefault(); last = pt(e); if (!raf) raf = requestAnimationFrame(apply); });
+  const end = () => { if (!st) return; if (raf) { cancelAnimationFrame(raf); apply(); }
+    if (edit.crop && (edit.crop.w < 0.02 || edit.crop.h < 0.02)) { edit.crop = null; updateBox(); } st = null; last = null; };
+  cv.addEventListener('pointerup', end); cv.addEventListener('pointercancel', end);
 })();
 function render(){
   $('files').textContent = files.map(f => f.name).join(', ');
