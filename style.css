@@ -41,3 +41,11 @@ nav button{padding:10px 2px;font-size:13px}
 #stage{display:flex;justify-content:center;background:var(--card);border-radius:10px;padding:6px}
 #prev{max-width:100%;touch-action:none;cursor:crosshair}
 #edhint{font-size:11px;color:var(--mut);margin-top:4px}
+
+button,select,input,textarea{-webkit-appearance:none;appearance:none;font-family:inherit}
+select{padding-right:26px;background-image:linear-gradient(45deg,transparent 50%,var(--mut) 50%),linear-gradient(135deg,var(--mut) 50%,transparent 50%);background-position:calc(100% - 14px) 55%,calc(100% - 9px) 55%;background-size:5px 5px,5px 5px;background-repeat:no-repeat}
+#theme{display:flex;align-items:center;justify-content:center;flex:none;padding:0;line-height:1}
+.sec{display:block;-webkit-text-fill-color:var(--a)}
+.sec:disabled{-webkit-text-fill-color:var(--a)}
+#go{display:block}
+html{-webkit-text-size-adjust:100%}

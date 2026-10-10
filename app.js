@@ -2,8 +2,8 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = 'lib/pdf.worker.min.js';
 const $ = id => document.getElementById(id);
 // theme
 (function(){
-  const t = localStorage.getItem('theme') || 'dark';
-  const set = v => { document.documentElement.dataset.theme = v; localStorage.setItem('theme', v);
+  let t = 'dark'; try { t = localStorage.getItem('theme') || 'dark'; } catch(e){}
+  const set = v => { document.documentElement.dataset.theme = v; try { localStorage.setItem('theme', v); } catch(e){}
     $('theme').textContent = v === 'dark' ? '☀' : '☾';
     const m = document.querySelector('meta[name=theme-color]'); if (m) m.content = v === 'dark' ? '#0fb5ae' : '#0fb5ae'; };
   set(t); $('theme').onclick = () => set(document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark');
