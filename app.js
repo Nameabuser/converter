@@ -12,7 +12,7 @@ const $ = id => document.getElementById(id);
 let outbox = null;
 let mode = 'img', files = [];
 const cfg = {
-  img:     {accept:'image/*,.heic,.heif', multi:true,  txt:'Tap or drop image(s) here (HEIC works too)'},
+  img:     {accept:'image/*,.heic,.heif', multi:true,  txt:'Tap or drop image(s) here'},
   pdf2txt: {accept:'application/pdf,.pdf', multi:false, txt:'Tap or drop a PDF here'},
   txt2pdf: {accept:'.txt,text/plain', multi:false, txt:'Tap or drop a .txt file (optional)'}
 };

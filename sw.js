@@ -1,4 +1,4 @@
-const V='converter-v10';
+const V='converter-v11';
 const FILES=['./','index.html','style.css','app.js','manifest.webmanifest','lib/pdf.min.js','lib/pdf.worker.min.js','lib/jspdf.umd.min.js','lib/heic2any.min.js','icons/icon48.png','icons/icon128.png','icons/icon192.png','icons/apple-touch-icon.png'];
 self.addEventListener('install',e=>{e.waitUntil(caches.open(V).then(c=>Promise.all(FILES.map(f=>fetch(new Request(f,{cache:'reload'})).then(r=>r.ok?c.put(f,r):null).catch(()=>null)))));self.skipWaiting();});
 self.addEventListener('activate',e=>{e.waitUntil(caches.keys().then(k=>Promise.all(k.filter(x=>x!==V).map(x=>caches.delete(x)))).then(()=>self.clients.claim()));});
