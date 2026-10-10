@@ -1,5 +1,15 @@
 pdfjsLib.GlobalWorkerOptions.workerSrc = 'lib/pdf.worker.min.js';
 const $ = id => document.getElementById(id);
+// theme
+(function(){
+  const t = localStorage.getItem('theme') || 'dark';
+  const set = v => { document.documentElement.dataset.theme = v; localStorage.setItem('theme', v);
+    $('theme').textContent = v === 'dark' ? '☀' : '☾';
+    const m = document.querySelector('meta[name=theme-color]'); if (m) m.content = v === 'dark' ? '#0fb5ae' : '#0fb5ae'; };
+  set(t); $('theme').onclick = () => set(document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark');
+})();
+// share/save outbox
+let outbox = null;
 let mode = 'img', files = [];
 const cfg = {
   img:     {accept:'image/*,.heic,.heif', multi:true,  txt:'Tap or drop image(s) here (HEIC works too)'},
@@ -12,7 +22,7 @@ const custom = () => $('outname').value.trim().replace(/[\\/:*?"<>|]/g,'');
 const N = def => custom() || def;
 function status(m, err){ $('status').textContent = m; $('status').className = err ? 'err' : ''; }
 function setMode(m){
-  mode = m; files = []; status('');
+  mode = m; files = []; status(''); edit = {rot:0, crop:null};
   document.querySelectorAll('#tabs button').forEach(b => b.classList.toggle('active', b.dataset.mode === m));
   const c = cfg[m], f = $('file');
   f.value = ''; f.accept = c.accept; f.multiple = c.multi;
@@ -24,14 +34,69 @@ function setMode(m){
   $('text').classList.toggle('hide', m !== 'txt2pdf');
   render();
 }
+let edit = {rot:0, crop:null}, prevImg = null;
+async function refreshEditor(){
+  const show = mode === 'img' && files.length > 0;
+  $('editor').classList.toggle('hide', !show);
+  $('cropReset').classList.toggle('hide', files.length !== 1);
+  $('edhint').classList.toggle('hide', files.length !== 1);
+  if (!show) { prevImg = null; return; }
+  try { prevImg = await loadImg(files[0]); } catch(e){ prevImg = null; return; }
+  drawPrev();
+}
+function rotated(img, rot){
+  const c = document.createElement('canvas'), q = rot % 2;
+  c.width = q ? img.naturalHeight : img.naturalWidth; c.height = q ? img.naturalWidth : img.naturalHeight;
+  const x = c.getContext('2d'); x.translate(c.width/2, c.height/2); x.rotate(rot*Math.PI/2);
+  x.drawImage(img, -img.naturalWidth/2, -img.naturalHeight/2); return c;
+}
+// source canvas for an image with rotation and (single image) crop applied
+function sourceFor(img){
+  let c = edit.rot ? rotated(img, edit.rot) : img;
+  const w = c.width || c.naturalWidth, h = c.height || c.naturalHeight;
+  if (files.length === 1 && edit.crop){
+    const k = edit.crop, sx = Math.round(k.x*w), sy = Math.round(k.y*h), sw = Math.max(1, Math.round(k.w*w)), sh = Math.max(1, Math.round(k.h*h));
+    const o = document.createElement('canvas'); o.width = sw; o.height = sh;
+    o.getContext('2d').drawImage(c, sx, sy, sw, sh, 0, 0, sw, sh); return o;
+  }
+  if (c === img){ const o = document.createElement('canvas'); o.width = w; o.height = h; o.getContext('2d').drawImage(img,0,0); return o; }
+  return c;
+}
+function drawPrev(){
+  if (!prevImg) return;
+  const r = rotated(prevImg, edit.rot), maxW = Math.min(420, document.body.clientWidth - 40), s = Math.min(1, maxW / r.width, 260 / r.height);
+  const cv = $('prev'); cv.width = Math.round(r.width*s); cv.height = Math.round(r.height*s);
+  const x = cv.getContext('2d'); x.drawImage(r, 0, 0, cv.width, cv.height);
+  if (files.length === 1 && edit.crop){
+    const k = edit.crop, rx = k.x*cv.width, ry = k.y*cv.height, rw = k.w*cv.width, rh = k.h*cv.height;
+    x.fillStyle = 'rgba(0,0,0,.55)'; x.fillRect(0,0,cv.width,ry); x.fillRect(0,ry+rh,cv.width,cv.height-ry-rh);
+    x.fillRect(0,ry,rx,rh); x.fillRect(rx+rw,ry,cv.width-rx-rw,rh);
+    x.strokeStyle = '#0fb5ae'; x.lineWidth = 2; x.strokeRect(rx,ry,rw,rh);
+  }
+}
+$('rotL').onclick = () => { edit.rot = (edit.rot + 3) % 4; edit.crop = null; drawPrev(); };
+$('rotR').onclick = () => { edit.rot = (edit.rot + 1) % 4; edit.crop = null; drawPrev(); };
+$('cropReset').onclick = () => { edit.crop = null; drawPrev(); };
+(function(){
+  const cv = $('prev'); let st = null;
+  const pt = e => { const b = cv.getBoundingClientRect(); return {x: Math.min(1,Math.max(0,(e.clientX-b.left)/b.width)), y: Math.min(1,Math.max(0,(e.clientY-b.top)/b.height))}; };
+  cv.addEventListener('pointerdown', e => { if (files.length !== 1) return; cv.setPointerCapture(e.pointerId); st = pt(e); });
+  cv.addEventListener('pointermove', e => { if (!st) return; const p = pt(e);
+    edit.crop = {x:Math.min(st.x,p.x), y:Math.min(st.y,p.y), w:Math.abs(p.x-st.x), h:Math.abs(p.y-st.y)}; drawPrev(); });
+  cv.addEventListener('pointerup', () => { if (edit.crop && (edit.crop.w < 0.02 || edit.crop.h < 0.02)) { edit.crop = null; drawPrev(); } st = null; });
+})();
 function render(){
   $('files').textContent = files.map(f => f.name).join(', ');
   $('go').disabled = mode === 'txt2pdf' ? false : files.length === 0;
+  $('share').disabled = $('go').disabled;
+  $('shareNow').classList.add('hide');
+  refreshEditor();
 }
 async function setFiles(list){
   list = [...list];
   if (mode === 'txt2pdf' && list[0]) { $('text').value = await list[0].text(); files = [list[0]]; }
   else files = cfg[mode].multi ? list : list.slice(0,1);
+  edit = {rot:0, crop:null};
   render();
 }
 document.querySelectorAll('#tabs button').forEach(b => b.onclick = () => setMode(b.dataset.mode));
@@ -43,6 +108,7 @@ drop.ondrop = e => { e.preventDefault(); drop.classList.remove('over'); setFiles
 
 const base = n => n.replace(/\.[^.]+$/, '');
 function save(blob, name){
+  if (outbox) { outbox.push(new File([blob], name, {type: blob.type})); return; }
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob); a.download = name;
   document.body.appendChild(a); a.click(); a.remove();
@@ -67,11 +133,12 @@ async function convertImages(){
   const type = $('fmt').value, ext = {'image/jpeg':'jpg','image/png':'png','image/webp':'webp'}[type];
   for (const f of files){
     const img = await loadImg(f);
-    const k = Math.min(1, lv().max / Math.max(img.naturalWidth, img.naturalHeight));
-    const c = document.createElement('canvas'); c.width = Math.round(img.naturalWidth*k); c.height = Math.round(img.naturalHeight*k);
+    const src = sourceFor(img);
+    const k = Math.min(1, lv().max / Math.max(src.width, src.height));
+    const c = document.createElement('canvas'); c.width = Math.max(1,Math.round(src.width*k)); c.height = Math.max(1,Math.round(src.height*k));
     const x = c.getContext('2d');
     if (type === 'image/jpeg'){ x.fillStyle = '#fff'; x.fillRect(0,0,c.width,c.height); }
-    x.drawImage(img,0,0,c.width,c.height);
+    x.drawImage(src,0,0,c.width,c.height);
     const idx = files.length > 1 && custom() ? '-' + (files.indexOf(f)+1) : '';
     save(await toBlob(c, type, lv().q), N(base(f.name)) + idx + '.' + ext);
   }
@@ -81,11 +148,12 @@ async function imagesToPdf(){
   const {jsPDF} = window.jspdf; let pdf;
   for (let i = 0; i < files.length; i++){
     const img = await loadImg(files[i]);
-    const k = Math.min(1, lv().max / Math.max(img.naturalWidth, img.naturalHeight));
-    const c = document.createElement('canvas'); c.width = Math.round(img.naturalWidth*k); c.height = Math.round(img.naturalHeight*k);
-    const x = c.getContext('2d'); x.fillStyle = '#fff'; x.fillRect(0,0,c.width,c.height); x.drawImage(img,0,0,c.width,c.height);
+    const src = sourceFor(img);
+    const k = Math.min(1, lv().max / Math.max(src.width, src.height));
+    const c = document.createElement('canvas'); c.width = Math.max(1,Math.round(src.width*k)); c.height = Math.max(1,Math.round(src.height*k));
+    const x = c.getContext('2d'); x.fillStyle = '#fff'; x.fillRect(0,0,c.width,c.height); x.drawImage(src,0,0,c.width,c.height);
     const data = c.toDataURL('image/jpeg', lv().q);
-    const w = img.naturalWidth * 0.75, h = img.naturalHeight * 0.75; // px -> pt
+    const w = src.width * 0.75, h = src.height * 0.75; // px -> pt
     const o = w > h ? 'l' : 'p';
     if (!pdf) pdf = new jsPDF({orientation:o, unit:'pt', format:[w,h]}); else pdf.addPage([w,h], o);
     pdf.addImage(data, 'JPEG', 0, 0, w, h);
@@ -197,12 +265,34 @@ async function textToPdf(){
   save(pdf.output('blob'), N(files[0] ? base(files[0].name) : 'text') + '.pdf');
   status('Done: PDF saved');
 }
-$('go').onclick = async () => {
-  $('go').disabled = true; status('Working...');
+async function runConvert(share){
+  $('go').disabled = true; $('share').disabled = true; $('shareNow').classList.add('hide'); status('Working...');
+  outbox = share ? [] : null;
   try {
-    await ({img:convertImages, pdf2txt:pdfToText, txt2pdf:textToPdf})[mode]();
+    await ({img:convertImages, img2pdf:imagesToPdf, pdf2txt:pdfToText, txt2pdf:textToPdf})[mode]();
+    if (share) await doShare();
   } catch(e){ status(e.message || String(e), true); }
-  render();
+  outbox = null; $('go').disabled = mode === 'txt2pdf' ? false : files.length === 0; $('share').disabled = $('go').disabled;
+}
+let pending = [];
+async function doShare(){
+  pending = outbox || []; outbox = null;
+  if (!pending.length) return;
+  const data = {files: pending, title: 'Converted file'};
+  if (!(navigator.canShare && navigator.canShare(data))) {
+    pending.forEach(f => save(f, f.name)); pending = [];
+    status('Sharing files is not supported here, so it was downloaded instead.'); return;
+  }
+  try { await navigator.share(data); status('Shared'); pending = []; }
+  catch(e){
+    if (e && e.name === 'AbortError') { status('Share cancelled'); pending = []; }
+    else { status('Ready. Tap "Tap to share".'); $('shareNow').classList.remove('hide'); }
+  }
+}
+$('shareNow').onclick = async () => {
+  try { await navigator.share({files: pending, title: 'Converted file'}); status('Shared'); $('shareNow').classList.add('hide'); pending = []; }
+  catch(e){ if (e && e.name === 'AbortError') status('Share cancelled'); else status('Could not open the share sheet', true); }
 };
+$('go').onclick = () => runConvert(false);
+$('share').onclick = () => runConvert(true);
 setMode('img');
-

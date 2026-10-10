@@ -1,4 +1,6 @@
-:root{--a:#0fb5ae;--a2:#1d7bff;--bg:#0e1a24;--card:#16283a;--tx:#eaf6fb;--mut:#8fa9ba}
+:root{--a:#0fb5ae;--a2:#1d7bff;--bg:#0e1a24;--card:#16283a;--tx:#eaf6fb;--mut:#8fa9ba;--bd:#28445b}
+[data-theme=light]{--bg:#f1f8fa;--card:#ffffff;--tx:#0e1a24;--mut:#4f6b7a;--bd:#bcd3dc}
+[data-theme=light] html,html[data-theme=light]{background:#dfeef2}
 *{box-sizing:border-box}
 body{margin:0 auto;max-width:480px;min-height:100vh;background:var(--bg);color:var(--tx);font:14px system-ui,sans-serif}
 header{padding-top:max(12px,env(safe-area-inset-top))!important;display:flex;gap:10px;align-items:center;padding:12px 14px;background:linear-gradient(135deg,var(--a),var(--a2))}
@@ -12,7 +14,7 @@ main{padding:10px 14px 14px}
 #drop.over{background:var(--card);color:var(--tx)}
 #files{font-size:12px;color:var(--mut);margin:6px 0;max-height:70px;overflow:auto}
 .row{display:flex;align-items:center;justify-content:space-between;margin:8px 0}
-select,textarea,input[type=text]{font-size:16px;background:var(--card);color:var(--tx);border:1px solid #28445b;border-radius:8px;padding:6px}
+select,textarea,input[type=text]{font-size:16px;background:var(--card);color:var(--tx);border:1px solid var(--bd);border-radius:8px;padding:6px}
 textarea{width:100%;height:90px;resize:vertical;margin-bottom:8px}
 #go{width:100%;padding:10px;border:0;border-radius:10px;background:linear-gradient(135deg,var(--a),var(--a2));color:#fff;font-weight:700;font-size:14px;cursor:pointer}
 #go:disabled{opacity:.4;cursor:default}
@@ -29,3 +31,13 @@ header img{width:36px;height:36px}
 nav button{padding:10px 2px;font-size:13px}
 #go{padding:14px;font-size:16px}
 #drop{height:100px}
+
+#theme{margin-left:auto;background:#ffffff33;border:0;border-radius:50%;width:36px;height:36px;font-size:18px;color:#fff;cursor:pointer}
+.sec{width:100%;margin-top:8px;padding:12px;border:2px solid var(--a);border-radius:10px;background:transparent;color:var(--a);font-weight:700;font-size:15px;cursor:pointer}
+.sec:disabled{opacity:.4;cursor:default}
+#editor{margin:6px 0}
+#edtools{gap:6px}
+#edtools button{flex:1;background:var(--card);color:var(--tx);border:1px solid var(--bd);border-radius:8px;padding:8px 2px;font-size:13px;cursor:pointer}
+#stage{display:flex;justify-content:center;background:var(--card);border-radius:10px;padding:6px}
+#prev{max-width:100%;touch-action:none;cursor:crosshair}
+#edhint{font-size:11px;color:var(--mut);margin-top:4px}
