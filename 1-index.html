@@ -1,0 +1,31 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#0fb5ae"><link rel="manifest" href="manifest.webmanifest"><link rel="apple-touch-icon" href="icons/apple-touch-icon.png"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="Converter"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"><link rel="stylesheet" href="style.css"><title>Converter</title></head>
+<body>
+<header><img src="icons/icon48.png" alt=""><div><h1>Converter</h1><p>Files stay on your device</p></div></header>
+<nav id="tabs">
+  <button data-mode="img" class="active">Image</button>
+  <button data-mode="pdf2txt">PDF</button>
+  <button data-mode="txt2pdf">Text</button>
+</nav>
+<main>
+  <label id="drop" for="file"><span id="dropText">Click or drop image(s) here</span><input type="file" id="file" hidden></label>
+  <div id="files"></div>
+  <div id="opt" class="row"><label for="fmt">Convert to</label>
+    <select id="fmt"><option value="application/pdf">PDF</option><option value="image/jpeg" selected>JPEG</option><option value="image/png">PNG</option><option value="image/webp">WebP</option></select></div>
+  <div id="popt" class="row hide"><label for="pfmt">Convert to</label>
+    <select id="pfmt"><option value="text" selected>Text</option><option value="pdfc">PDF (compressed)</option><option value="image/jpeg">JPEG</option><option value="image/png">PNG</option><option value="image/webp">WebP</option></select></div>
+  <div id="topt" class="row hide"><label for="tfmt">Convert to</label>
+    <select id="tfmt"><option value="pdf" selected>PDF</option><option value="image/jpeg">JPEG</option><option value="image/png">PNG</option><option value="image/webp">WebP</option></select></div>
+  <div id="copt" class="row"><label for="comp">Compression</label>
+    <select id="comp"><option value="none" selected>None</option><option value="medium">Medium (smaller)</option><option value="strong">Strong (smallest)</option></select></div>
+  <div class="row"><label for="outname">File name</label><input id="outname" type="text" placeholder="optional" autocomplete="off"></div>
+  <textarea id="text" placeholder="Type or paste text here, or choose a .txt file above"></textarea>
+  <button id="go" disabled>Convert &amp; Download</button>
+  <div id="status"></div>
+</main>
+<script src="lib/heic2any.min.js"></script>
+<script src="lib/pdf.min.js"></script>
+<script src="lib/jspdf.umd.min.js"></script>
+<script src="app.js"></script>
+<script>if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js');</script>
+</body></html>
